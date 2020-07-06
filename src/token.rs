@@ -3,19 +3,18 @@ pub struct TokenList {
 }
 
 pub struct Token {
-    kind: TokenKind,
+    _kind: TokenKind,
     word: String,
 }
 
 enum TokenKind {
     Word,
     ReadFile,
-    Heredoc,
-    Herestr,
-    RedirectOw,
+    HereDoc,
+    HereStr,
+    RedirectOW,
     RedirectAdd,
     Pipe,
-    Exit,
 }
 
 impl TokenList {
@@ -23,14 +22,17 @@ impl TokenList {
         let mut token_list = Vec::new();
 
         for word in content.split(" ") {
-            let kind = match word {
-                "|" => TokenKind::Pipe,
-                ">" => TokenKind::Pipe,
-                ">>" => TokenKind::Pipe,
-                _ => TokenKind::Word,
+            let _kind = match word {
+                "|"   => TokenKind::Pipe,
+                ">"   => TokenKind::RedirectOW,
+                ">>"  => TokenKind::RedirectAdd,
+                "<"   => TokenKind::ReadFile,
+                "<<"  => TokenKind::HereDoc,
+                "<<<" => TokenKind::HereStr,
+                _     => TokenKind::Word,
             };
 
-            let token = Token { kind, word: word.to_string() };
+            let token = Token { _kind, word: word.to_string() };
             token_list.push(token);
         }
 

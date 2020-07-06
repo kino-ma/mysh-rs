@@ -21,7 +21,7 @@ fn main() {
             NextTask::Exit => return,
         };
 
-        let child = exec_and_wait(tokens);
+        exec_and_wait(tokens);
     }
 }
 
