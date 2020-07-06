@@ -21,7 +21,7 @@ impl TokenList {
     pub fn new(content: &String) -> TokenList {
         let mut token_list = Vec::new();
 
-        for word in content.split(" ") {
+        for word in content.split_whitespace() {
             let _kind = match word {
                 "|"   => TokenKind::Pipe,
                 ">"   => TokenKind::RedirectOW,
