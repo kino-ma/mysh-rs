@@ -1,13 +1,13 @@
-pub struct TokenList {
-    tokens: Vec<Token>,
+pub struct List {
+    tokens: Vec<Node>,
 }
 
-pub struct Token {
-    _kind: TokenKind,
+pub struct Node {
+    _kind: Kind,
     word: String,
 }
 
-enum TokenKind {
+enum Kind {
     Word,
     ReadFile,
     HereDoc,
@@ -15,32 +15,38 @@ enum TokenKind {
     RedirectOW,
     RedirectAdd,
     Pipe,
+    Nothing,
 }
 
-impl TokenList {
-    pub fn new(content: &String) -> TokenList {
+impl List {
+    pub fn new(content: &String) -> List {
         let mut token_list = Vec::new();
 
         for word in content.split_whitespace() {
             let _kind = match word {
-                "|"   => TokenKind::Pipe,
-                ">"   => TokenKind::RedirectOW,
-                ">>"  => TokenKind::RedirectAdd,
-                "<"   => TokenKind::ReadFile,
-                "<<"  => TokenKind::HereDoc,
-                "<<<" => TokenKind::HereStr,
-                _     => TokenKind::Word,
+                "|"   => Kind::Pipe,
+                ">"   => Kind::RedirectOW,
+                ">>"  => Kind::RedirectAdd,
+                "<"   => Kind::ReadFile,
+                "<<"  => Kind::HereDoc,
+                "<<<" => Kind::HereStr,
+                ""    => Kind::Nothing,
+                _     => Kind::Word,
             };
 
-            let token = Token { _kind, word: word.to_string() };
-            token_list.push(token);
+            let node = Node { _kind, word: word.to_string() };
+            token_list.push(node);
         }
 
-        return TokenList { tokens: token_list };
+        List { tokens: token_list }
     }
 
-    pub fn command(&self) -> &str {
-        &self.tokens[0].word
+    pub fn command(&self) -> Option<&str> {
+        if self.tokens.len() != 0 {
+            Some(&self.tokens[0].word)
+        } else {
+            None
+        }
     }
 
     pub fn args(&self) -> Vec<&std::ffi::OsStr> {
