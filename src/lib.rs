@@ -1,4 +1,5 @@
 pub mod token;
+pub mod parse;
 
 use std::io;
 use std::process;
@@ -32,18 +33,14 @@ pub fn get_input() -> Result<String, io::Error> {
 
 
 fn exec_and_wait(tokens: token::List) -> Result<(), io::Error> {
-    let cmd = match tokens.command() {
-        Some(cmd) => cmd,
-        None => return Ok(())
-    };
 
-    let args = tokens.args();
-
+    /*
     let mut child = process::Command::new(cmd)
         .args(args)
         .spawn()?;
 
     child.wait()?;
+    */
 
     Ok(())
 }
