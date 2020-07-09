@@ -1,8 +1,10 @@
 use crate::token;
+use std::io;
+use std::process;
 
 pub enum Command<'a> {
     Normal(Args<'a>),
-    Piped(Box<Command<'a>>, Box<Command<'a>>),
+    Piped(Args<'a>, Box<Command<'a>>),
 }
 
 pub struct Args<'a> {
@@ -16,6 +18,7 @@ pub enum Input<'a> {
     ReadFile(&'a str),
     HereDoc(&'a str),
     HereStr(&'a str),
+    Pipe(process::ChildStdout),
     Stdin,
 }
 
@@ -25,7 +28,7 @@ pub enum Output<'a> {
     Stdout,
 }
 
-impl Command<'_> {
+impl<'b> Command<'b> {
     pub fn new<'a>(list: token::List<'a>) -> Option<Command<'a>> {
         let mut token_iter = list.tokens.into_iter();
 
@@ -59,12 +62,63 @@ impl Command<'_> {
             output,
         };
 
-        let command = Command::Normal(args);
-
         match piped {
-            None => Some(command),
-            Some(p) => Some(Command::Piped(Box::new(command), Box::new(p))),
+            None => Some(Command::Normal(args)),
+            Some(p) => Some(Command::Piped(args, Box::new(p))),
         }
 
+    }
+
+    pub fn set_input(&mut self, dest: Input<'b>) {
+        let mut arg_input = match self {
+            Command::Normal(args) => &mut args.input,
+            Command::Piped(args, _) => &mut args.input,
+        };
+
+        *arg_input = dest;
+    }
+
+    pub fn exec(self) -> io::Result<()> {
+        match self {
+            Command::Normal(args) => args.exec_normal()?,
+            Command::Piped(args, command) => args.exec_piped(*command)?,
+        };
+
+        Ok(())
+    }
+
+}
+
+
+impl Args<'_> {
+    fn exec_normal(self) -> io::Result<()> {
+        if let Input::Pipe(p) = self.input {
+            process::Command::new(self.cmd)
+                .args(&self.args)
+                .stdin(p)
+                .spawn()
+        } else {
+            process::Command::new(self.cmd)
+                .args(&self.args)
+                .spawn()
+        }?.wait()?;
+
+        Ok(())
+    }
+
+    fn exec_piped(self, mut cmd2: Command) -> io::Result<()> {
+        let parent_out = match process::Command::new(self.cmd)
+            .args(&self.args)
+            .stdout(process::Stdio::piped())
+            .spawn()?
+            .stdout
+            {
+                Some(o) => o,
+                None => return Err(io::Error::new(io::ErrorKind::Other, "failed to make pipe")),
+            };
+
+
+        cmd2.set_input(Input::Pipe(parent_out));
+        cmd2.exec()
     }
 }

@@ -17,7 +17,9 @@ pub fn run(input: &String) -> Result<Status, Box<dyn Error>> {
 
     let tokens = token::List::new(input);
 
-    exec_and_wait(tokens)?;
+    if let Some(parsed) = parse::Command::new(tokens) {
+        parsed.exec()?;
+    }
 
     Ok(Status::Continue)
 }
@@ -32,15 +34,10 @@ pub fn get_input() -> Result<String, io::Error> {
 }
 
 
-fn exec_and_wait(tokens: token::List) -> Result<(), io::Error> {
-
-    /*
-    let mut child = process::Command::new(cmd)
-        .args(args)
-        .spawn()?;
-
+/*
+fn exec_and_wait(command: parse::Command) -> Result<(), io::Error> {
+    let mut child = command.exec()?;
     child.wait()?;
-    */
-
     Ok(())
 }
+*/
