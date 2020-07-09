@@ -103,11 +103,9 @@ mod tests {
         exec_and_wait(precommand);
 
         let command = "sed s/hoge/fuga/ < temp/read_file1.txt".to_string();
-        exec_and_wait(command);
+        let output = exec_and_get_output(command);
 
-        let out_content = std::fs::read_to_string("temp/read_file1.txt")
-            .expect("failed to get output content");
-        assert_eq!(out_content, "fugahoge");
+        assert_eq!(output, "fugahoge\n");
         fs::remove_file("temp/read_file1.txt").expect("failed to remove file");
     }
 
