@@ -117,8 +117,13 @@ impl<'b> Args<'b> {
 
         let mut p = process::Command::new(self.cmd);
 
-        if let Input::Pipe(pipe) = self.input {
-            p.stdin(pipe);
+        match self.input {
+            Input::Pipe(pipe) => { p.stdin(pipe); () },
+            Input::ReadFile(filename) => {
+                let fd = fs::File::open(filename)?;
+                p.stdin(fd);
+            },
+            _ => (),
         }
 
         match self.output {
