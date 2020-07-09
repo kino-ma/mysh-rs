@@ -101,7 +101,7 @@ mod tests {
 
         let tokens = token::List::new(&command);
         let mut parsed = parse::Command::new(tokens).expect("failed to parse");
-        parsed.set_output(parse::Output::Pipe(process::Stdio::piped()));
+        parsed.set_output_child(parse::Output::Pipe(process::Stdio::piped()));
 
         parsed.exec().expect("failed to spawn child")
     }

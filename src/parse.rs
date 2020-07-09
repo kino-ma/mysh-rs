@@ -23,8 +23,7 @@ pub enum Input<'a> {
 }
 
 pub enum Output<'a> {
-    RedirectOW(Option<&'a str>),
-    RedirectAdd(Option<&'a str>),
+    Redirect(Option<&'a str>),
     Pipe(process::Stdio),
     Stdout,
 }
@@ -44,8 +43,8 @@ impl<'b> Command<'b> {
                 Some("<")   => input = Input::ReadFile(token_iter.next()?),
                 Some("<<")  => input = Input::HereDoc(token_iter.next()?),
                 Some("<<<") => input = Input::HereStr(token_iter.next()?),
-                Some(">")   => output = Output::RedirectOW(token_iter.next()),
-                Some(">>")  => output = Output::RedirectAdd(token_iter.next()),
+                Some(">")   => output = Output::Redirect(token_iter.next()),
+                Some(">>")  => output = Output::Redirect(token_iter.next()),
                 Some("|")   => {
                     let list = token_iter.collect();
                     piped = Some(Command::new(token::List{tokens:list})?);
@@ -82,7 +81,14 @@ impl<'b> Command<'b> {
     pub fn set_output(&mut self, dst: Output<'b>) {
         match self {
             Command::Normal(args) => args.set_output(dst),
-            Command::Piped(_, cmd2) => cmd2.set_output(dst),
+            Command::Piped(args, _) => args.set_output(dst),
+        }
+    }
+
+    pub fn set_output_child(&mut self, dst: Output<'b>) {
+        match self {
+            Command::Normal(args) => args.set_output(dst),
+            Command::Piped(_, cmd2) => cmd2.set_output_child(dst),
         }
     }
 
