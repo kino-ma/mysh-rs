@@ -9,23 +9,19 @@ pub enum Status {
     Exit,
 }
 
-pub fn run() -> Result<Status, Box<dyn Error>> {
-    eprint!("$ ");
-
-    let input = get_input()?;
-
+pub fn run(input: &String) -> Result<Status, Box<dyn Error>> {
     if input.is_empty() {
         return Ok(Status::Exit);
     }
 
-    let tokens = token::List::new(&input);
+    let tokens = token::List::new(input);
 
     exec_and_wait(tokens)?;
 
     Ok(Status::Continue)
 }
 
-fn get_input() -> Result<String, io::Error> {
+pub fn get_input() -> Result<String, io::Error> {
     let mut buffer = String::new();
     let stdin = io::stdin();
 
