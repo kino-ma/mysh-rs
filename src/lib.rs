@@ -97,12 +97,8 @@ mod tests {
 
 
     fn exec(command: String) -> std::process::Child {
-        use std::process;
-
         let tokens = token::List::new(&command);
-        let mut parsed = parse::Command::new(tokens).expect("failed to parse");
-        parsed.set_output_child(parse::Output::Pipe(process::Stdio::piped()));
-
+        let parsed = parse::Command::new(tokens).expect("failed to parse");
         parsed.exec().expect("failed to spawn child")
     }
 
@@ -111,7 +107,13 @@ mod tests {
     }
 
     fn exec_and_get_output(command: String) -> String {
-        let child = exec(command);
+        use std::process;
+
+        let tokens = token::List::new(&command);
+        let mut parsed = parse::Command::new(tokens).expect("failed to parse");
+        parsed.set_output_child(parse::Output::Pipe(process::Stdio::piped()));
+        let child = parsed.exec().expect("failed to spawn child");
+
         let child_out = child
             .wait_with_output()
             .expect("failed to wait on child");
