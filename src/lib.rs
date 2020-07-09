@@ -95,6 +95,23 @@ mod tests {
     }
 
 
+    #[test]
+    pub fn should_exec_read_file() {
+        use std::fs;
+
+        let precommand = "echo hogehoge > temp/read_file1.txt".to_string();
+        exec_and_wait(precommand);
+
+        let command = "sed s/hoge/fuga/ < temp/read_file1.txt".to_string();
+        exec_and_wait(command);
+
+        let out_content = std::fs::read_to_string("temp/read_file1.txt")
+            .expect("failed to get output content");
+        assert_eq!(out_content, "fugahoge");
+        fs::remove_file("temp/read_file1.txt").expect("failed to remove file");
+    }
+
+
 
     fn exec(command: String) -> std::process::Child {
         let tokens = token::List::new(&command);
