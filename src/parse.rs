@@ -70,22 +70,22 @@ impl<'b> Command<'b> {
 
     }
 
-    pub fn set_input(&mut self, dest: Input<'b>) {
-        let arg_input = match self {
-            Command::Normal(args) => &mut args.input,
-            Command::Piped(args, _) => &mut args.input,
+    pub fn set_input(&mut self, src: Input<'b>) {
+        let args = match self {
+            Command::Normal(args) => args,
+            Command::Piped(args, _) => args,
         };
 
-        *arg_input = dest;
+        args.set_input(src);
     }
 
-    pub fn set_output(&mut self, dest: Output<'b>) {
-        let arg_output = match self {
-            Command::Normal(args) => &mut args.output,
-            Command::Piped(args, _) => &mut args.output,
+    pub fn set_output(&mut self, dst: Output<'b>) {
+        let args = match self {
+            Command::Normal(args) => args,
+            Command::Piped(args, _) => args,
         };
 
-        *arg_output = dest;
+        args.set_output(dst);
     }
 
     pub fn exec(self) -> io::Result<process::Child> {
@@ -98,7 +98,15 @@ impl<'b> Command<'b> {
 }
 
 
-impl Args<'_> {
+impl<'b> Args<'b> {
+    fn set_input(&mut self, src: Input<'b>) {
+        self.input = src;
+    }
+
+    fn set_output(&mut self, dst: Output<'b>) {
+        self.output = dst;
+    }
+
     fn exec_normal(self) -> io::Result<process::Child> {
         let mut p = process::Command::new(self.cmd);
 
@@ -114,13 +122,12 @@ impl Args<'_> {
     }
 
     fn exec_piped(mut self, mut cmd2: Command) -> io::Result<process::Child> {
-        self.output = Output::Pipe(process::Stdio::piped());
+        self.set_output(Output::Pipe(process::Stdio::piped()));
 
         let parent_out = match self.exec_normal()?.stdout {
                 Some(o) => o,
                 None => return Err(io::Error::new(io::ErrorKind::Other, "failed to make pipe")),
             };
-
 
         cmd2.set_input(Input::Pipe(parent_out));
         cmd2.exec()
