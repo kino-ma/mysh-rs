@@ -80,12 +80,10 @@ impl<'b> Command<'b> {
     }
 
     pub fn set_output(&mut self, dst: Output<'b>) {
-        let args = match self {
-            Command::Normal(args) => args,
-            Command::Piped(args, _) => args,
-        };
-
-        args.set_output(dst);
+        match self {
+            Command::Normal(args) => args.set_output(dst),
+            Command::Piped(_, cmd2) => cmd2.set_output(dst),
+        }
     }
 
     pub fn exec(self) -> io::Result<process::Child> {
