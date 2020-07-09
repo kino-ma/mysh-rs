@@ -2,7 +2,6 @@ pub mod token;
 pub mod parse;
 
 use std::io;
-use std::process;
 use std::error::Error;
 
 pub enum Status {
@@ -18,7 +17,7 @@ pub fn run(input: &String) -> Result<Status, Box<dyn Error>> {
     let tokens = token::List::new(input);
 
     if let Some(parsed) = parse::Command::new(tokens) {
-        parsed.exec()?;
+        exec_and_wait(parsed)?;
     }
 
     Ok(Status::Continue)
@@ -34,10 +33,8 @@ pub fn get_input() -> Result<String, io::Error> {
 }
 
 
-/*
 fn exec_and_wait(command: parse::Command) -> Result<(), io::Error> {
     let mut child = command.exec()?;
     child.wait()?;
     Ok(())
 }
-*/

@@ -25,6 +25,7 @@ pub enum Input<'a> {
 pub enum Output<'a> {
     RedirectOW(Option<&'a str>),
     RedirectAdd(Option<&'a str>),
+    Pipe(process::Stdio),
     Stdout,
 }
 
@@ -70,7 +71,7 @@ impl<'b> Command<'b> {
     }
 
     pub fn set_input(&mut self, dest: Input<'b>) {
-        let mut arg_input = match self {
+        let arg_input = match self {
             Command::Normal(args) => &mut args.input,
             Command::Piped(args, _) => &mut args.input,
         };
@@ -78,41 +79,44 @@ impl<'b> Command<'b> {
         *arg_input = dest;
     }
 
-    pub fn exec(self) -> io::Result<()> {
-        match self {
-            Command::Normal(args) => args.exec_normal()?,
-            Command::Piped(args, command) => args.exec_piped(*command)?,
+    pub fn set_output(&mut self, dest: Output<'b>) {
+        let arg_output = match self {
+            Command::Normal(args) => &mut args.output,
+            Command::Piped(args, _) => &mut args.output,
         };
 
-        Ok(())
+        *arg_output = dest;
+    }
+
+    pub fn exec(self) -> io::Result<process::Child> {
+        match self {
+            Command::Normal(args) => args.exec_normal(),
+            Command::Piped(args, command) => args.exec_piped(*command),
+        }
     }
 
 }
 
 
 impl Args<'_> {
-    fn exec_normal(self) -> io::Result<()> {
-        if let Input::Pipe(p) = self.input {
-            process::Command::new(self.cmd)
-                .args(&self.args)
-                .stdin(p)
-                .spawn()
-        } else {
-            process::Command::new(self.cmd)
-                .args(&self.args)
-                .spawn()
-        }?.wait()?;
+    fn exec_normal(self) -> io::Result<process::Child> {
+        let mut p = process::Command::new(self.cmd);
 
-        Ok(())
+        if let Input::Pipe(pipe) = self.input {
+            p.stdin(pipe);
+        }
+
+        if let Output::Pipe(pipe) = self.output {
+            p.stdout(pipe);
+        }
+
+        p.args(&self.args).spawn()
     }
 
-    fn exec_piped(self, mut cmd2: Command) -> io::Result<()> {
-        let parent_out = match process::Command::new(self.cmd)
-            .args(&self.args)
-            .stdout(process::Stdio::piped())
-            .spawn()?
-            .stdout
-            {
+    fn exec_piped(mut self, mut cmd2: Command) -> io::Result<process::Child> {
+        self.output = Output::Pipe(process::Stdio::piped());
+
+        let parent_out = match self.exec_normal()?.stdout {
                 Some(o) => o,
                 None => return Err(io::Error::new(io::ErrorKind::Other, "failed to make pipe")),
             };
