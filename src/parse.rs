@@ -23,7 +23,8 @@ pub enum Input<'a> {
 }
 
 pub enum Output<'a> {
-    Redirect(Option<&'a str>),
+    RedirectOW(&'a str),
+    RedirectAdd(&'a str),
     Pipe(process::Stdio),
     Stdout,
 }
@@ -43,8 +44,8 @@ impl<'b> Command<'b> {
                 Some("<")   => input = Input::ReadFile(token_iter.next()?),
                 Some("<<")  => input = Input::HereDoc(token_iter.next()?),
                 Some("<<<") => input = Input::HereStr(token_iter.next()?),
-                Some(">")   => output = Output::Redirect(token_iter.next()),
-                Some(">>")  => output = Output::Redirect(token_iter.next()),
+                Some(">")   => output = Output::RedirectOW(token_iter.next()?),
+                Some(">>")  => output = Output::RedirectAdd(token_iter.next()?),
                 Some("|")   => {
                     let list = token_iter.collect();
                     piped = Some(Command::new(token::List{tokens:list})?);
@@ -112,15 +113,29 @@ impl<'b> Args<'b> {
     }
 
     fn exec_normal(self) -> io::Result<process::Child> {
+        use std::fs;
+
         let mut p = process::Command::new(self.cmd);
 
         if let Input::Pipe(pipe) = self.input {
             p.stdin(pipe);
         }
 
-        if let Output::Pipe(pipe) = self.output {
-            p.stdout(pipe);
-        }
+        match self.output {
+            Output::Pipe(pipe) => { p.stdout(pipe); () },
+            Output::RedirectOW(filename) => {
+                let fd = fs::File::create(filename)?;
+                p.stdout(fd);
+            },
+            Output::RedirectAdd(filename) => {
+                let fd = fs::OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(filename)?;
+                p.stdout(fd);
+            },
+            _ => (),
+        };
 
         p.args(&self.args).spawn()
     }
