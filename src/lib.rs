@@ -23,7 +23,7 @@ pub fn run(input: &String) -> Result<Status, Box<dyn Error>> {
     Ok(Status::Continue)
 }
 
-pub fn get_input() -> Result<String, io::Error> {
+pub fn get_input() -> std::io::Result<String> {
     let mut buffer = String::new();
     let stdin = io::stdin();
 
@@ -32,6 +32,20 @@ pub fn get_input() -> Result<String, io::Error> {
     Ok(buffer.to_string())
 }
 
+pub fn get_content(eof: &str) -> std::io::Result<String> {
+    let mut line = String::new();
+    let mut contents = Vec::new();
+
+    loop {
+        line = get_input()?;
+        if line == format!("{}\n", eof) {
+            break;
+        }
+        contents.push(line);
+    }
+
+    Ok(contents.concat())
+}
 
 fn exec_and_wait(command: parse::Command) -> Result<(), io::Error> {
     let mut child = command.exec()?;
@@ -103,6 +117,21 @@ mod tests {
         exec_and_wait(precommand);
 
         let command = "sed s/hoge/fuga/ < temp/read_file1.txt".to_string();
+        let output = exec_and_get_output(command);
+
+        assert_eq!(output, "fugahoge\n");
+        fs::remove_file("temp/read_file1.txt").expect("failed to remove file");
+    }
+
+    #[test]
+    pub fn should_exec_here_doc() {
+        use std::fs;
+
+        let command =
+"sed s/hoge/fuga/ << EOF
+hogehoge
+EOF"
+        .to_string();
         let output = exec_and_get_output(command);
 
         assert_eq!(output, "fugahoge\n");
