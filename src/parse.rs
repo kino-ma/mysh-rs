@@ -29,6 +29,7 @@ pub enum Output<'a> {
     Stdout,
 }
 
+
 impl<'b> Command<'b> {
     pub fn new<'a>(list: token::List<'a>) -> Option<Command<'a>> {
         let mut token_iter = list.tokens.into_iter();
@@ -114,14 +115,25 @@ impl<'b> Args<'b> {
 
     fn exec_normal(self) -> io::Result<process::Child> {
         use std::fs;
+        use std::io::Write;
 
         let mut p = process::Command::new(self.cmd);
+        let mut input = None;
 
         match self.input {
             Input::Pipe(pipe) => { p.stdin(pipe); () },
             Input::ReadFile(filename) => {
                 let fd = fs::File::open(filename)?;
                 p.stdin(fd);
+            },
+            Input::HereDoc(eof) => {
+                let content = crate::get_content(eof)?;
+                input = Some(content);
+                p.stdin(process::Stdio::piped());
+            },
+            Input::HereStr(content) => {
+                input = Some(content.to_string());
+                p.stdin(process::Stdio::piped());
             },
             _ => (),
         }
@@ -142,7 +154,16 @@ impl<'b> Args<'b> {
             _ => (),
         };
 
-        p.args(&self.args).spawn()
+        let mut child = p.args(&self.args).spawn()?;
+        if let Some(input) = input {
+            let child_stdin = match child.stdin.as_mut() {
+                Some(stdin) => stdin,
+                None => return Err(io::Error::new(io::ErrorKind::Other, "failed to make pipe")),
+            };
+            child_stdin.write_all(input.as_bytes())?;
+        }
+        Ok(child)
+
     }
 
     fn exec_piped(mut self, mut cmd2: Command) -> io::Result<process::Child> {
