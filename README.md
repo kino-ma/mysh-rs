@@ -22,12 +22,14 @@ egohaguf
 #### redirection
 ```sh
 $ ls > test.txt
+$ echo hello >> test.txt
 $ cat test.txt
 Cargo.lock
 Cargo.toml
 README.md
 src
 test.txt
+hello
 ```
 
 #### read from file
