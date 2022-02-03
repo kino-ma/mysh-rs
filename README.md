@@ -1,5 +1,5 @@
-# mysh 2
-My shell implementation on Rust
+# mysh-rs
+My little shell implementation written in Rust
 
 usage:
 
